@@ -2,20 +2,38 @@ package com.example.locationalert;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Criteria;
+import android.location.Geocoder;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import java.util.*;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+import java.io.IOException;
+
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,View.OnClickListener, LocationListener {
 
     private GoogleMap mMap;
-
+    double cLongitude,cLatitude;
+    private Button addButton;
+    Location location;
+    private EditText locationName;
+    LocationManager locationManager;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -24,8 +42,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-    }
 
+        addButton = (Button) findViewById(R.id.buttonAddLocation);
+        locationName = (EditText) findViewById(R.id.location);
+        addButton.setOnClickListener(this);
+    }
 
     /**
      * Manipulates the map once available.
@@ -41,11 +62,63 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
-        // Add a marker in Sydney and move the camera
+        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
                 || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            mMap.setMyLocationEnabled(true);
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,10,Criteria.ACCURACY_FINE,this);
+        }
+        location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+        cLongitude = location.getLongitude();
+        cLatitude = location.getLatitude();
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(new LatLng(cLatitude,cLongitude)));
+    }
+
+    public void onClick(View v){
+        if(!locationName.getText().toString().equals("")){
+        Geocoder geocoder = new Geocoder(getBaseContext());
+        List<Address> gotAddresses = null;
+        try {
+            gotAddresses = geocoder.getFromLocationName(locationName.getText().toString() + " near me", 1);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        Address received = gotAddresses.get(0);
+        mMap.addMarker(new MarkerOptions().position(new LatLng(received.getLatitude(), received.getLongitude())).title(locationName.toString()).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)));
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(new LatLng(received.getLatitude(), received.getLongitude())));
+            mMap.moveCamera(CameraUpdateFactory.zoomTo(10));
+        locationName.setText(received.toString());
+
         }
     }
 
+    @Override
+    public void onLocationChanged(Location location) {
+
+        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+
+        }
+        cLongitude = location.getLongitude();
+        cLatitude = location.getLatitude();
+        mMap.addMarker(new MarkerOptions().position(new LatLng(cLatitude, cLongitude)));
+        mMap.moveCamera(CameraUpdateFactory.zoomOut());
+
+    }
+
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+
+    }
+
+    @Override
+    public void onProviderEnabled(String provider) {
+
+    }
+
+    @Override
+    public void onProviderDisabled(String provider) {
+
+    }
 }

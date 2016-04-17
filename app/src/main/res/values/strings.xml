@@ -1,5 +1,5 @@
 <resources>
     <string name="app_name">LocationAlert</string>
     <string name="title_activity_maps">Map</string>
-    <string name="title_activity_splash_screen">Location Alert</string>
+    <string name="title_activity_splash_screen">Location Bump</string>
 </resources>
