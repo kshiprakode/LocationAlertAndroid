@@ -2,17 +2,22 @@ package com.example.locationalert;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.graphics.drawable.Drawable;
 import android.location.Address;
 import android.location.Criteria;
 import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -21,89 +26,120 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+
 import java.util.*;
 
 import java.io.IOException;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,View.OnClickListener, LocationListener {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, View.OnClickListener, LocationListener {
 
     private GoogleMap mMap;
-    double cLongitude,cLatitude;
-    private Button addButton;
-    Location location;
+    double cLongitude, cLatitude;
+
+    Location location, finalAddress;
     private EditText locationName;
+    private TextView FinalAddress;
     LocationManager locationManager;
+    Marker m;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
+
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-        addButton = (Button) findViewById(R.id.buttonAddLocation);
+        //Initializing the View elements like the Buttons and the TextViews
+        Button addButton = (Button) findViewById(R.id.buttonAddLocation);
         locationName = (EditText) findViewById(R.id.location);
+        FinalAddress = (TextView) findViewById(R.id.finalLocation);
+
+        //Activating the Listener on the Add Destination button
         addButton.setOnClickListener(this);
     }
 
-    /**
-     * Manipulates the map once available.
-     * This callback is triggered when the map is ready to be used.
-     * This is where we can add markers or lines, add listeners or move the camera. In this case,
-     * we just add a marker near Sydney, Australia.
-     * If Google Play services is not installed on the device, the user will be prompted to install
-     * it inside the SupportMapFragment. This method will only be triggered once the user has
-     * installed Google Play services and returned to the app.
-     */
     @Override
 
     public void onMapReady(GoogleMap googleMap) {
+
         mMap = googleMap;
 
+        //Using location Manager to get current location
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        //Check if the user has location permissions enabled for accessing the location
+
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
                 || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,10,Criteria.ACCURACY_FINE,this);
+            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 10, Criteria.ACCURACY_FINE, this);
+            mMap.setMyLocationEnabled(true);
         }
-        location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-        cLongitude = location.getLongitude();
-        cLatitude = location.getLatitude();
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(new LatLng(cLatitude,cLongitude)));
     }
 
-    public void onClick(View v){
-        if(!locationName.getText().toString().equals("")){
-        Geocoder geocoder = new Geocoder(getBaseContext());
-        List<Address> gotAddresses = null;
-        try {
-            gotAddresses = geocoder.getFromLocationName(locationName.getText().toString() + " near me", 1);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    public void onClick(View v) {
 
-        Address received = gotAddresses.get(0);
-        mMap.addMarker(new MarkerOptions().position(new LatLng(received.getLatitude(), received.getLongitude())).title(locationName.toString()).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(new LatLng(received.getLatitude(), received.getLongitude())));
-            mMap.moveCamera(CameraUpdateFactory.zoomTo(10));
-        locationName.setText(received.toString());
+        if (!locationName.getText().toString().equals("")) {
 
+            //Use the
+            Geocoder geocoder = new Geocoder(getBaseContext());
+            List<Address> gotAddresses = null;
+            try {
+                gotAddresses = geocoder.getFromLocationName(locationName.getText().toString() + " near me", 1);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                Address received = gotAddresses.get(0);
+
+                mMap.addMarker(new MarkerOptions().position(new LatLng(received.getLatitude(), received.getLongitude())).title(locationName.toString()).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)));
+                mMap.moveCamera(CameraUpdateFactory.newLatLng(new LatLng(received.getLatitude(), received.getLongitude())));
+                mMap.moveCamera(CameraUpdateFactory.zoomTo(10));
+
+                finalAddress = new Location("Final Address");
+                finalAddress.setLatitude(received.getLatitude());
+                finalAddress.setLongitude(received.getLongitude());
+
+                View text1 = findViewById(R.id.location);
+                View text2 = findViewById(R.id.finalLocation);
+                text1.setVisibility(View.INVISIBLE);
+                v.setVisibility(View.INVISIBLE);
+                text2.setVisibility(View.VISIBLE);
+
+                FinalAddress.setText(received.getAddressLine(0));
+                Toast.makeText(MapsActivity.this, "You are " + location.distanceTo(finalAddress) + "from the Destination", Toast.LENGTH_SHORT).show();
+            } catch (NullPointerException e) {
+                Toast.makeText(MapsActivity.this, "Please specify destination address", Toast.LENGTH_SHORT).show();
+            }
         }
     }
 
     @Override
     public void onLocationChanged(Location location) {
 
-        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
         }
-        cLongitude = location.getLongitude();
-        cLatitude = location.getLatitude();
-        mMap.addMarker(new MarkerOptions().position(new LatLng(cLatitude, cLongitude)));
-        mMap.moveCamera(CameraUpdateFactory.zoomOut());
+        m = mMap.addMarker(new MarkerOptions().position(new LatLng(location.getLatitude(), location.getLongitude())));
+        mMap.moveCamera(CameraUpdateFactory.zoomTo(12));
+
+        if (finalAddress != null) {
+            if (location.distanceTo(finalAddress) < 200) {
+                Toast.makeText(MapsActivity.this, "You are " + location.distanceTo(finalAddress) + "from the Destination", Toast.LENGTH_SHORT).show();
+            }
+        }
 
     }
 
