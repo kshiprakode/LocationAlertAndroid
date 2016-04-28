@@ -3,6 +3,7 @@
 // Assignment 2
 // Team Members - Rujuta Palande, Kshipra Kode
 // Application Name - Location Bump
+// Date 27 April 2016
 */
 package com.example.locationalert;
 
